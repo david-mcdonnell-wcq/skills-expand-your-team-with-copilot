@@ -304,6 +304,49 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  function buildSharePayload(activityName, details, formattedSchedule) {
+    const activityUrl = `${window.location.origin}${window.location.pathname}?activity=${encodeURIComponent(
+      activityName
+    )}`;
+    const shareTitle = `${activityName} at Mergington High School`;
+    const shareText = `${activityName} is happening ${formattedSchedule}. ${details.description}`;
+
+    return {
+      title: shareTitle,
+      text: shareText,
+      url: activityUrl,
+    };
+  }
+
+  function buildShareLinks(sharePayload) {
+    const encodedUrl = encodeURIComponent(sharePayload.url);
+    const encodedText = encodeURIComponent(sharePayload.text);
+    const encodedTitle = encodeURIComponent(sharePayload.title);
+
+    return {
+      email: `mailto:?subject=${encodedTitle}&body=${encodedText}%0A%0A${encodedUrl}`,
+      x: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    };
+  }
+
+  async function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const helperTextArea = document.createElement("textarea");
+    helperTextArea.value = text;
+    helperTextArea.setAttribute("readonly", "");
+    helperTextArea.style.position = "absolute";
+    helperTextArea.style.left = "-9999px";
+    document.body.appendChild(helperTextArea);
+    helperTextArea.select();
+    document.execCommand("copy");
+    document.body.removeChild(helperTextArea);
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -498,6 +541,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    const sharePayload = buildSharePayload(name, details, formattedSchedule);
+    const shareLinks = buildShareLinks(sharePayload);
+    const canUseNativeShare = typeof navigator.share === "function";
 
     // Create activity tag
     const tagHtml = `
@@ -528,6 +574,19 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
       ${capacityIndicator}
+      <div class="share-actions">
+        ${
+          canUseNativeShare
+            ? `
+          <button class="share-button native-share-button" type="button">Share</button>
+        `
+            : ""
+        }
+        <a class="share-button" href="${shareLinks.email}">Email</a>
+        <a class="share-button" href="${shareLinks.x}" target="_blank" rel="noopener noreferrer">X</a>
+        <a class="share-button" href="${shareLinks.facebook}" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <button class="share-button copy-share-button" type="button">Copy Link</button>
+      </div>
       <div class="participants-list">
         <h5>Current Participants:</h5>
         <ul>
@@ -586,6 +645,29 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    const nativeShareButton = activityCard.querySelector(".native-share-button");
+    if (nativeShareButton) {
+      nativeShareButton.addEventListener("click", async () => {
+        try {
+          await navigator.share(sharePayload);
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            showMessage("Sharing failed. Please try a different share option.", "error");
+          }
+        }
+      });
+    }
+
+    const copyShareButton = activityCard.querySelector(".copy-share-button");
+    copyShareButton.addEventListener("click", async () => {
+      try {
+        await copyTextToClipboard(sharePayload.url);
+        showMessage("Activity link copied.", "success");
+      } catch (error) {
+        showMessage("Unable to copy link. Please copy it manually.", "error");
+      }
+    });
 
     activitiesList.appendChild(activityCard);
   }
