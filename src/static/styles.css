@@ -32,6 +32,20 @@
   --info-light: #d1ecf1;
 }
 
+body[data-theme="dark"] {
+  --background: #121212;
+  --surface: #1e1e1e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --border: #3a3a3a;
+  --border-light: #2a2a2a;
+  --border-focus: #555555;
+  --success-light: #1f3320;
+  --warning-light: #3b2e10;
+  --error-light: #3b1f1f;
+  --info-light: #19343a;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -640,6 +654,9 @@ footer {
   position: absolute;
   top: 10px;
   right: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #user-status {
